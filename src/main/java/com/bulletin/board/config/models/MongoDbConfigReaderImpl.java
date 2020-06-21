@@ -7,8 +7,8 @@ import javax.validation.constraints.NotBlank;
 @Data
 public class MongoDbConfigReaderImpl implements MongoDbConfigReader {
     @NotBlank
-    public String connectionUri;
+    public String uri;
 
     @NotBlank
-    public String databaseName;
+    public String database;
 }

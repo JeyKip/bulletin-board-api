@@ -1,7 +1,9 @@
 server:
   port: 8081
 
-data:
-  mongodb:
-    connectionUri: mongodb://user:password@localhost:27017/admin
-    databaseName: bulletinboard
+spring:
+  data:
+    mongodb:
+      uri: mongodb://user:password@localhost:27020/admin
+      database: bulletinboard
+      auto-index-creation: true

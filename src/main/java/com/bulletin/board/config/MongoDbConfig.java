@@ -9,7 +9,7 @@ import org.springframework.validation.annotation.Validated;
 public class MongoDbConfig {
     @Bean
     @Validated
-    @ConfigurationProperties(prefix = "data.mongodb")
+    @ConfigurationProperties(prefix = "spring.data.mongodb")
     public MongoDbConfigReader mongoDbConfig() {
         return new MongoDbConfigReaderImpl();
     }
