@@ -22,51 +22,40 @@ public class CategoryServiceImpl implements CategoryService {
 
     @Override
     public Mono<CategoryResponse> create(SaveCategoryRequest request) {
-        return Mono.fromSupplier(() -> {
-            var category = categoryMapper.fromSaveRequest(keyGeneratorService.next(), request);
-            var savedCategory = categoryRepository.save(category);
+        var category = categoryMapper.fromSaveRequest(keyGeneratorService.next(), request);
 
-            return categoryMapper.fromEntity(savedCategory);
-        });
+        return categoryRepository.save(category)
+                .map(categoryMapper::fromEntity);
     }
 
     @Override
     public Mono<CategoryResponse> update(String categoryId, SaveCategoryRequest request) {
-        return Mono.fromSupplier(() -> {
-            var categoryOpt = categoryRepository.findById(categoryId);
-            if (categoryOpt.isPresent()) {
-                var category = categoryMapper.fromSaveRequest(request, categoryOpt.get());
-                var savedCategory = categoryRepository.save(category);
+        return categoryRepository.findById(categoryId)
+                .flatMap(entity -> {
+                    var category = categoryMapper.fromSaveRequest(request, entity);
 
-                return categoryMapper.fromEntity(savedCategory);
-            } else {
-                // throw not found exception here
-                return null;
-            }
-        });
+                    return categoryRepository.save(category)
+                            .map(categoryMapper::fromEntity);
+                })
+                .switchIfEmpty(Mono.error(new Exception())); // TODO: throw not found exception here instead
     }
 
     @Override
     public Mono<List<CategoryResponse>> getAll() {
-        var categories = categoryRepository.findAll()
-                .stream()
+        return categoryRepository.findAll()
                 .map(categoryMapper::fromEntity)
                 .collect(Collectors.toList());
-
-        return Mono.just(categories);
     }
 
     @Override
     public Mono<CategoryResponse> getById(String categoryId) {
-        return Mono.fromSupplier(() -> {
-            return categoryRepository.findById(categoryId)
-                    .map(categoryMapper::fromEntity)
-                    .orElse(null); // throw not found exception here
-        });
+        return categoryRepository.findById(categoryId)
+                .map(categoryMapper::fromEntity)
+                .switchIfEmpty(Mono.error(new Exception())); // TODO: throw not found exception here instead
     }
 
     @Override
     public Mono<Void> delete(String categoryId) {
-        return Mono.fromRunnable(() -> categoryRepository.deleteById(categoryId));
+        return categoryRepository.deleteById(categoryId);
     }
 }
