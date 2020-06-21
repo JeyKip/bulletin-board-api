@@ -2,9 +2,9 @@ package com.bulletin.board.logic.impls;
 
 import com.bulletin.board.api.models.request.SaveCategoryRequest;
 import com.bulletin.board.api.models.response.CategoryResponse;
-import com.bulletin.board.data.entities.CategoryEntity;
 import com.bulletin.board.data.repositories.CategoryRepository;
 import com.bulletin.board.logic.CategoryService;
+import com.bulletin.board.mapping.CategoryMapper;
 import com.bulletin.board.services.KeyGeneratorService;
 import lombok.AllArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -18,53 +18,39 @@ import java.util.stream.Collectors;
 public class CategoryServiceImpl implements CategoryService {
     private final KeyGeneratorService keyGeneratorService;
     private final CategoryRepository categoryRepository;
+    private final CategoryMapper categoryMapper;
 
     @Override
     public Mono<CategoryResponse> create(SaveCategoryRequest request) {
-        var category = new CategoryEntity();
-        category.setCategoryId(keyGeneratorService.next());
-        category.setName(request.getName());
-        category.setImageUrl(request.getImageUrl());
+        return Mono.fromSupplier(() -> {
+            var category = categoryMapper.fromSaveRequest(keyGeneratorService.next(), request);
+            var savedCategory = categoryRepository.save(category);
 
-        var savedCategory = categoryRepository.save(category);
-
-        return Mono.just(CategoryResponse.builder()
-                .categoryId(savedCategory.getCategoryId())
-                .name(savedCategory.getName())
-                .imageUrl(savedCategory.getImageUrl())
-                .build());
+            return categoryMapper.fromEntity(savedCategory);
+        });
     }
 
     @Override
     public Mono<CategoryResponse> update(String categoryId, SaveCategoryRequest request) {
-        var categoryOpt = categoryRepository.findById(categoryId);
-        if (categoryOpt.isPresent()) {
-            var category = categoryOpt.get();
-            category.setName(request.getName());
-            category.setImageUrl(request.getImageUrl());
+        return Mono.fromSupplier(() -> {
+            var categoryOpt = categoryRepository.findById(categoryId);
+            if (categoryOpt.isPresent()) {
+                var category = categoryMapper.fromSaveRequest(request, categoryOpt.get());
+                var savedCategory = categoryRepository.save(category);
 
-            var savedCategory = categoryRepository.save(category);
-
-            return Mono.just(CategoryResponse.builder()
-                    .categoryId(savedCategory.getCategoryId())
-                    .name(savedCategory.getName())
-                    .imageUrl(savedCategory.getImageUrl())
-                    .build());
-        } else {
-            // throw not found exception here
-            return Mono.empty();
-        }
+                return categoryMapper.fromEntity(savedCategory);
+            } else {
+                // throw not found exception here
+                return null;
+            }
+        });
     }
 
     @Override
     public Mono<List<CategoryResponse>> getAll() {
         var categories = categoryRepository.findAll()
                 .stream()
-                .map(category -> CategoryResponse.builder()
-                        .categoryId(category.getCategoryId())
-                        .name(category.getName())
-                        .imageUrl(category.getImageUrl())
-                        .build())
+                .map(categoryMapper::fromEntity)
                 .collect(Collectors.toList());
 
         return Mono.just(categories);
@@ -72,19 +58,11 @@ public class CategoryServiceImpl implements CategoryService {
 
     @Override
     public Mono<CategoryResponse> getById(String categoryId) {
-        var categoryOpt = categoryRepository.findById(categoryId);
-        if (categoryOpt.isPresent()) {
-            var category = categoryOpt.get();
-
-            return Mono.just(CategoryResponse.builder()
-                    .categoryId(category.getCategoryId())
-                    .name(category.getName())
-                    .imageUrl(category.getImageUrl())
-                    .build());
-        } else {
-            // throw not found exception here
-            return Mono.empty();
-        }
+        return Mono.fromSupplier(() -> {
+            return categoryRepository.findById(categoryId)
+                    .map(categoryMapper::fromEntity)
+                    .orElse(null); // throw not found exception here
+        });
     }
 
     @Override
